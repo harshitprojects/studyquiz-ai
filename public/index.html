@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Study Assistant | Smart PDF Q&A & Quiz Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <path d="M9 7h6"></path>
+            <path d="M9 11h4"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">StudyMind AI</h1>
+          <p class="brand-subtitle">Smart Document Assistant & Quiz Master</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- API Status Indicator -->
+        <div id="apiStatusBadge" class="status-badge checking">
+          <span class="status-dot"></span>
+          <span id="apiStatusText">Checking API...</span>
+        </div>
+        <a
+          href="https://aistudio.google.com/app/apikey"
+          target="_blank"
+          rel="noreferrer"
+          class="nav-link"
+          title="Get a free Google Gemini API Key"
+        >
+          Get Free Gemini Key ↗
+        </a>
+      </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="app-body">
+      <!-- Left Sidebar: Document Upload & Info -->
+      <aside class="sidebar">
+        <!-- Upload Section -->
+        <section class="card upload-card" id="uploadSection">
+          <div class="card-header">
+            <span class="card-title">Upload Study Material</span>
+            <span class="card-badge">PDF only</span>
+          </div>
+
+          <div
+            class="drop-zone"
+            id="dropZone"
+            tabindex="0"
+            role="button"
+            aria-label="Upload PDF file"
+          >
+            <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" hidden />
+            <div class="drop-zone-content">
+              <div class="drop-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <p class="drop-primary">
+                <strong>Click to browse</strong> or drag & drop
+              </p>
+              <p class="drop-hint">PDF lecture notes, chapters, papers (up to 25MB)</p>
+            </div>
+
+            <!-- Uploading spinner state -->
+            <div class="upload-loader hidden" id="uploadLoader">
+              <div class="spinner"></div>
+              <p id="uploadLoaderText">Extracting document text...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Active Document Card (Revealed after upload) -->
+        <section class="card document-card hidden" id="documentCard">
+          <div class="card-header">
+            <span class="card-title">Active Document</span>
+            <span class="status-pill active">Loaded</span>
+          </div>
+
+          <div class="doc-info-box">
+            <div class="doc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <div class="doc-details">
+              <!-- Uploaded PDF Name -->
+              <h3 class="doc-name" id="docName" title="Uploaded document name">
+                document.pdf
+              </h3>
+              <div class="doc-meta-tags">
+                <span class="meta-tag" id="docPages">0 Pages</span>
+                <span class="meta-tag" id="docWords">0 Words</span>
+                <span class="meta-tag" id="docSize">0 KB</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Actions -->
+          <div class="doc-actions">
+            <!-- Generate Quiz Button -->
+            <button
+              class="btn btn-primary btn-block"
+              id="btnGenerateQuiz"
+              title="Generate a 10-question multiple-choice quiz from this PDF"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span>Generate 10-Q Quiz</span>
+            </button>
+
+            <button
+              class="btn btn-secondary btn-block"
+              id="btnChangePdf"
+              title="Upload another PDF document"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Change PDF</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Quick Study Prompt Starters -->
+        <section class="card prompts-card" id="promptsCard">
+          <div class="card-header">
+            <span class="card-title">Study Starters</span>
+          </div>
+          <div class="prompt-chips">
+            <button class="chip" data-prompt="Summarize the core concepts of this document in 5 concise bullet points.">
+              📝 5-Point Summary
+            </button>
+            <button class="chip" data-prompt="List all key terms, formulas, and definitions introduced in this document.">
+              📖 Key Terms & Definitions
+            </button>
+            <button class="chip" data-prompt="Explain the most complex or difficult concept in this document in simple, beginner-friendly terms.">
+              💡 Explain Simply (ELI5)
+            </button>
+            <button class="chip" data-prompt="What are the main potential exam questions or weaknesses a professor might test from this material?">
+              🎯 Potential Exam Topics
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Main Workspace: Tabbed Chat & Quiz Views -->
+      <section class="workspace">
+        <!-- View Navigation Tabs -->
+        <div class="view-tabs">
+          <button class="tab-btn active" id="tabChat" data-target="chatView">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Ask & Study</span>
+          </button>
+
+          <button class="tab-btn" id="tabQuiz" data-target="quizView">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Practice Quiz</span>
+            <span class="tab-badge" id="quizCountBadge">10 Qs</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: Chat View -->
+        <div class="tab-content active" id="chatView">
+          <div class="chat-header">
+            <div class="chat-doc-info">
+              <span class="chat-dot"></span>
+              <span id="chatDocStatus">No document loaded. Please upload a PDF to ask grounded questions.</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btnClearChat" title="Clear chat history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
+          </div>
+
+          <!-- Chat Messages Area -->
+          <div class="chat-messages" id="chatMessages">
+            <div class="message system-message">
+              <div class="message-avatar bot-avatar">🎓</div>
+              <div class="message-content">
+                <p><strong>Welcome to your AI Study Assistant!</strong></p>
+                <p>
+                  Upload your textbook chapter, syllabus, or lecture slides on the left.
+                  Once uploaded, you can ask any question and I will answer <em>strictly based on the document's content</em>.
+                  You can also click <strong>Generate 10-Q Quiz</strong> at any time to test your mastery!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Area -->
+          <div class="chat-input-wrapper">
+            <form id="chatForm" class="chat-input-bar">
+              <textarea
+                id="chatInput"
+                placeholder="Ask anything about the uploaded PDF... (Press Enter to send, Shift+Enter for new line)"
+                rows="1"
+                disabled
+              ></textarea>
+              <button
+                type="submit"
+                id="btnSendChat"
+                class="btn btn-send"
+                disabled
+                title="Send message"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </form>
+            <div class="input-footer">
+              <span class="input-tip">💡 AI answers strictly from your PDF without external hallucinations.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Quiz View -->
+        <div class="tab-content" id="quizView">
+          <!-- Empty State (No quiz generated yet) -->
+          <div class="quiz-empty-state" id="quizEmptyState">
+            <div class="empty-icon">🎯</div>
+            <h2>Ready to Test Your Knowledge?</h2>
+            <p>
+              Generate a 10-question multiple-choice practice quiz directly from the content of your uploaded document.
+            </p>
+            <button class="btn btn-primary btn-lg" id="btnEmptyGenerateQuiz">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span>Generate 10-Question Quiz</span>
+            </button>
+          </div>
+
+          <!-- Quiz Loading State -->
+          <div class="quiz-loading-state hidden" id="quizLoadingState">
+            <div class="spinner large-spinner"></div>
+            <h3>Generating 10-Question Study Quiz...</h3>
+            <p class="loading-subtext">
+              Analyzing key concepts, drafting 4 options per question, and validating ground truth explanations.
+            </p>
+          </div>
+
+          <!-- Quiz Active View -->
+          <div class="quiz-container hidden" id="quizContainer">
+            <!-- Quiz Control Bar & Live Score -->
+            <div class="quiz-top-bar">
+              <div class="quiz-meta">
+                <span class="quiz-pill" id="quizDocLabel">Document: study.pdf</span>
+                <span class="quiz-pill score-pill" id="quizScorePill">Score: 0 / 10</span>
+              </div>
+              <div class="quiz-actions">
+                <button class="btn btn-ghost btn-sm" id="btnResetQuiz">
+                  ↺ Retake
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btnRegenerateQuiz">
+                  ⚡ New 10 Questions
+                </button>
+              </div>
+            </div>
+
+            <!-- Quiz Questions List Container -->
+            <div class="questions-list" id="questionsList">
+              <!-- Dynamically populated 10 question cards -->
+            </div>
+
+            <!-- Final Quiz Score Summary Card -->
+            <div class="quiz-summary-card hidden" id="quizSummaryCard">
+              <div class="summary-icon" id="summaryEmoji">🏆</div>
+              <h3 id="summaryTitle">Quiz Completed!</h3>
+              <p id="summaryScoreText">You scored 10 out of 10 (100%)</p>
+              <div class="summary-actions">
+                <button class="btn btn-primary" id="btnSummaryRetake">Retake Quiz</button>
+                <button class="btn btn-secondary" id="btnSummaryNew">Generate Another Quiz</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
